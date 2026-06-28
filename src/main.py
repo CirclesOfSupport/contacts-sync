@@ -20,7 +20,7 @@ BQ_DATASET = "RESPONSES"
 USERS_TABLE = f"{BQ_PROJECT}.{BQ_DATASET}.users"
 STAGING_TABLE = f"{BQ_PROJECT}.{BQ_DATASET}.itdo423_textit_full"
 DIFF_TABLE = f"{BQ_PROJECT}.{BQ_DATASET}.itdo423_sync_diff"
-RUNLOG_TABLE = f"{BQ_PROJECT}.{BQ_DATASET}.users_sync_runlog"
+RUNLOG_TABLE = f"{BQ_PROJECT}.{BQ_DATASET}.contacts_sync_runlog"
 
 SYNC_PASSWORD = os.environ.get("SYNC_PASSWORD", "")
 TEXTIT_TOKEN = os.environ.get("TEXTIT_TOKEN", "")
@@ -188,7 +188,7 @@ DDL_RUNLOG = f"""CREATE TABLE IF NOT EXISTS `{RUNLOG_TABLE}` (
 
 def run_sync():
     client = bigquery.Client(project=BQ_PROJECT)
-    run_id = "users_sync_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    run_id = "contacts_sync_" + datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     started = datetime.now(timezone.utc)
     client.query(DDL_DIFF).result()
     client.query(DDL_RUNLOG).result()
@@ -215,7 +215,7 @@ def run_sync():
         merge_job.result()
         rows_patched = merge_job.num_dml_affected_rows or 0
     except Exception as e:
-        logger.exception("users-sync failed")
+        logger.exception("contacts-sync failed")
         status, error = "error", str(e)
 
     finished = datetime.now(timezone.utc)
@@ -261,7 +261,7 @@ def sync():
     """Full TextIt -> BQ users sync. Pulls all contacts, loads staging, logs
     every changed cell to itdo423_sync_diff (run_id), MERGEs users
     (uniform TextIt-wins, case-insensitive compare, verbatim write), and writes
-    run metadata to users_sync_runlog.
+    run metadata to contacts_sync_runlog.
 
     Body: {"password": "<SYNC_PASSWORD>"}
     """

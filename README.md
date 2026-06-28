@@ -1,4 +1,4 @@
-# users-sync
+# contacts-sync
 
 Cloud Run service: nightly full sync of the BigQuery `users` table from TextIt
 (source of truth). Automates the ITDO-423 manual sync procedure.
@@ -12,7 +12,7 @@ Cloud Run service: nightly full sync of the BigQuery `users` table from TextIt
    new_value, is_volatile) — the diff report AND the rollback source.
 4. MERGEs `RESPONSES.users`: uniform TextIt-wins, case-insensitive comparison
    (LOWER+TRIM, NULL==''==blank), verbatim writes, 5 INT64 cols via SAFE_CAST.
-5. Writes run metadata to `RESPONSES.users_sync_runlog`.
+5. Writes run metadata to `RESPONSES.contacts_sync_runlog`.
 
 Design rationale and full history: see ITDO-423 in Atlas (`/early_alert/`).
 
