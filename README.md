@@ -14,8 +14,6 @@ Cloud Run service: nightly full sync of the BigQuery `users` table from TextIt
    (LOWER+TRIM, NULL==''==blank), verbatim writes, 5 INT64 cols via SAFE_CAST.
 5. Writes run metadata to `RESPONSES.contacts_sync_runlog`.
 
-Design rationale and full history: see ITDO-423 in Atlas (`/early_alert/`).
-
 ## Scope
 
 - UPDATE-only on contacts present in both systems. Contacts in TextIt with no
@@ -27,9 +25,10 @@ Design rationale and full history: see ITDO-423 in Atlas (`/early_alert/`).
 
 ## Rollback
 
-Each run is reversible via the value-based reverse-merge keyed on run_id
-(`itdo423_rollback_reverse_merge.sql` in kriton-dev/EarlyAlert). It restores
-old_value only where the current value still equals what the run wrote.
+Each run is reversible via a value-based reverse-merge keyed on `run_id`, sourced
+from `RESPONSES.itdo423_sync_diff`. It restores `old_value` only where the current
+value still equals what the run wrote (so it will not clobber a later legitimate
+change).
 
 ## Env vars (set in Cloud Run console, Variables & Secrets — NOT in repo)
 
@@ -45,8 +44,8 @@ early-alert-responses.
 
 ## Schedule
 
-Cloud Scheduler nightly, sequenced before vamc-sync (which reads vamc_presumed
-that this job may change). See the nightly-jobs ordering in Atlas.
+Cloud Scheduler nightly, sequenced before vamc-sync (which reads `vamc_presumed`,
+a field this job may change).
 
 ## Future
 
