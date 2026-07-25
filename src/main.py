@@ -69,6 +69,28 @@ STAGING_COLS = ["uuid"] + [tx for (_bq, tx, _i) in FIELD_MAP]
 # TextIt pull
 # ---------------------------------------------------------------------------
 
+def _textit_get(url, headers):
+    """GET with the TextIt 2,500-req/hr rate limit handled: on a 429, parse the
+    'available in N seconds' body, sleep N+3, and retry the SAME request. Holds
+    until the request succeeds — never dies on a throttle, never skips a page.
+    (ITDO-454. Canonical form shared across contacts-sync, state-vamc-sync,
+    backup-textit-flows; mirrors referral-journey-ingest._textit_get.)"""
+    attempt = 0
+    while True:
+        attempt += 1
+        resp = requests.get(url, headers=headers, timeout=120)
+        if resp.status_code == 429:
+            wait = 60
+            m = re.search(r"available in (\d+)", resp.text)
+            if m:
+                wait = int(m.group(1)) + 3
+            logger.warning(f"textit 429; sleeping {wait}s (attempt {attempt})")
+            time.sleep(wait)
+            continue
+        resp.raise_for_status()
+        return resp.json()
+
+
 def pull_all_contacts():
     """Paginate the full TextIt contacts list. Returns list of dicts keyed by
     staging column name (uuid + 49 field keys), orgcode cleaned."""
@@ -77,9 +99,7 @@ def pull_all_contacts():
     rows = []
     pages = 0
     while url:
-        resp = requests.get(url, headers=headers, timeout=120)
-        resp.raise_for_status()
-        data = resp.json()
+        data = _textit_get(url, headers)
         for c in data.get("results", []):
             fields = c.get("fields", {}) or {}
             row = {"uuid": c.get("uuid")}
