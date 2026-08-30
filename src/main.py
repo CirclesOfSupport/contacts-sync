@@ -141,8 +141,18 @@ def load_staging(client, rows):
 # SQL builders (case-insensitive compare, verbatim write, INT64 cast)
 # ---------------------------------------------------------------------------
 
+# Fields where BQ-side '' must stay DISTINCT from TextIt NULL, so a stale empty
+# string registers as changed and the MERGE rewrites it to NULL (SET already
+# emits NULLIF(...,'')). Scoped to testaccount only pending upstream add-to-db fix
+# (add-to-db writes '' for blank STRING fields; dashboard filter is testaccount IS NULL,
+# so '' silently drops real contacts off VA-BAA counts). Expand set if we generalize.
+BLANK_DISTINCT = {"testaccount"}
+
 def _cmp_bq(bq, isint, alias):
     inner = f"CAST({alias}.`{bq}` AS STRING)" if isint else f"{alias}.`{bq}`"
+    if bq in BLANK_DISTINCT:
+        # keep '' distinct from NULL on the BQ side; do NOT collapse blank -> NULL
+        return f"LOWER(TRIM({inner}))"
     return f"LOWER(NULLIF(TRIM({inner}),''))"
 
 def _cmp_tx(tx):
